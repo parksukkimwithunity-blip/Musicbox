@@ -38,7 +38,7 @@ button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc)
 <button id="pp">일시정지</button>
 <button id="mk" style="margin-top:8px">GIF로 저장</button>
 <div id="msg" class="tip"></div>
-<div class="tip">그림 칸에는 움직이는 GIF도 넣을 수 있어요. 저장되는 GIF는 너비 480px, 초당 10프레임이에요. 어둡게 보이는 부분은 저장할 때 잘려요. 재생바가 끝에 닿으면 처음으로 돌아가요.</div>
+<div class="tip">그림 칸에는 움직이는 GIF도 넣을 수 있어요. 저장되는 GIF는 너비 540px, 초당 10프레임이에요. 어둡게 보이는 부분은 저장할 때 잘려요. 재생바가 끝에 닿으면 처음으로 돌아가요.</div>
 </div>
 </div>
 
@@ -139,12 +139,26 @@ function lzw(ix){
   }
   emit(pre);emit(257);if(nb>0)out.push(bits&255);return out;
 }
-function gifBytes(w,h,list,delayCs){
+function medianCut(hist,N){
+  var cols=[];hist.forEach(function(c,k){cols.push({r:((k>>12)&63)*4+2,g:((k>>6)&63)*4+2,b:(k&63)*4+2,n:c})});
+  var boxes=[cols],CH=["r","g","b"];
+  while(boxes.length<N){
+    var bi=-1,bro=0,bch="r";
+    boxes.forEach(function(bx,i){if(bx.length<2)return;var mn={r:255,g:255,b:255},mx={r:0,g:0,b:0};
+      bx.forEach(function(c){CH.forEach(function(ch){if(c[ch]<mn[ch])mn[ch]=c[ch];if(c[ch]>mx[ch])mx[ch]=c[ch]})});
+      CH.forEach(function(ch){if(mx[ch]-mn[ch]>bro){bro=mx[ch]-mn[ch];bi=i;bch=ch}})});
+    if(bi<0)break;
+    var bx=boxes[bi].slice().sort(function(a,b){return a[bch]-b[bch]}),tot=0;bx.forEach(function(c){tot+=c.n});
+    var acc=0,cut=1;for(var q=0;q<bx.length-1;q++){acc+=bx[q].n;cut=q+1;if(acc>=tot/2)break}
+    boxes.splice(bi,1,bx.slice(0,cut),bx.slice(cut));
+  }
+  return boxes.map(function(bx){var r=0,g=0,b=0,t=0;bx.forEach(function(c){r+=c.r*c.n;g+=c.g*c.n;b+=c.b*c.n;t+=c.n});return[Math.round(r/t),Math.round(g/t),Math.round(b/t)]});
+}
+function gifBytes(w,h,list,delayCs,pal){
   var o=[];function w16(v){o.push(v&255,(v>>8)&255)}
   "GIF89a".split("").forEach(function(c){o.push(c.charCodeAt(0))});
   w16(w);w16(h);o.push(0xF7,0,0);
-  for(var i=0;i<256;i++){var r=Math.floor(i/42),gg=Math.floor((i%42)/6),b=i%6;
-    if(i>251){o.push(0,0,0)}else{o.push(Math.round(r*51),Math.round(gg*255/6),Math.round(b*51))}}
+  for(var i=0;i<256;i++){var c=pal[i]||[0,0,0];o.push(c[0],c[1],c[2])}
   o.push(0x21,0xFF,11);"NETSCAPE2.0".split("").forEach(function(c){o.push(c.charCodeAt(0))});o.push(3,1,0,0,0);
   list.forEach(function(ix){
     o.push(0x21,0xF9,4,0);w16(delayCs);o.push(0,0);
@@ -159,10 +173,9 @@ $("mk").addEventListener("click",async function(){
   var dl={save:async function(o){var b=new Blob([o.data],{type:"image/gif"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=o.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}};
   if(!dl){$("msg").textContent="이 화면에서는 저장을 못 해요.";return}
   var btn=this;btn.disabled=true;playing=false;
-  var cr=crop(),W=480,sc=W/cr.w,H=Math.round(cr.h*sc),len=Math.min(Math.max(parseFloat($("len").value)||8,1),30),n=Math.round(len*10);
+  var cr=crop(),W=540,sc=W/cr.w,H=Math.round(cr.h*sc),len=Math.min(Math.max(parseFloat($("len").value)||8,1),30),n=Math.round(len*10);
   var oc=document.createElement("canvas");oc.width=W;oc.height=H;var og=oc.getContext("2d",{willReadFrequently:true});
-  var list=[];
-  for(var f=0;f<n;f++){
+  function render(f){
     var t=f/10,p=params(t);
     og.setTransform(1,0,0,1,0,0);og.fillStyle="#fff";og.fillRect(0,0,W,H);
     og.setTransform(sc,0,0,sc,-cr.x*sc,-cr.y*sc);
@@ -171,15 +184,29 @@ $("mk").addEventListener("click",async function(){
     if(src){var iw=src.width,ih=src.height,r=Math.max(728/iw,728/ih),w=iw*r,h=ih*r;
       og.save();og.beginPath();og.rect(176,470,728,728);og.clip();var mo=motion(t);og.translate(540+mo.dx,834+mo.dy);og.rotate(mo.rot*Math.PI/180);og.scale(mo.sc,mo.sc);og.drawImage(src,-w/2,-h/2,w,h);og.restore()}
     ui(og,p.cur,p.st,p.tot);
-    var px=og.getImageData(0,0,W,H).data,ix=new Uint8Array(W*H);
+    return og.getImageData(0,0,W,H).data;
+  }
+  $("msg").textContent="색을 고르는 중…";
+  await new Promise(function(r){setTimeout(r,0)});
+  var hist=new Map(),ks=Math.min(n,8);
+  for(var s0=0;s0<ks;s0++){var d0=render(Math.floor(s0*n/ks));
+    for(var i0=0;i0<d0.length;i0+=12){var k0=((d0[i0]>>2)<<12)|((d0[i0+1]>>2)<<6)|(d0[i0+2]>>2);hist.set(k0,(hist.get(k0)||0)+1)}}
+  var pal=medianCut(hist,254);pal.push([255,255,255],[0,0,0]);
+  var lut=new Int16Array(262144).fill(-1);
+  function nearest(r,g,b){var best=0,bd=1e9;for(var c=0;c<pal.length;c++){var dr=pal[c][0]-r,dg=pal[c][1]-g,db=pal[c][2]-b,d=dr*dr+dg*dg+db*db;if(d<bd){bd=d;best=c}}return best}
+  var list=[];
+  for(var f=0;f<n;f++){
+    var px=render(f),ix=new Uint8Array(W*H);
     for(var i=0,j=0;i<px.length;i+=4,j++){
-      ix[j]=Math.round(px[i]/255*5)*42+Math.round(px[i+1]/255*6)*6+Math.round(px[i+2]/255*5)}
+      var key=((px[i]>>2)<<12)|((px[i+1]>>2)<<6)|(px[i+2]>>2),v=lut[key];
+      if(v<0){v=nearest(px[i],px[i+1],px[i+2]);lut[key]=v}
+      ix[j]=v}
     list.push(ix);
     $("msg").textContent="만드는 중… "+Math.round((f+1)/n*100)+"%";
     await new Promise(function(r){setTimeout(r,0)});
   }
   try{
-    await dl.save({filename:"player.gif",data:gifBytes(W,H,list,10)});
+    await dl.save({filename:"player.gif",data:gifBytes(W,H,list,10,pal)});
     $("msg").textContent="저장 완료!";
   }catch(err){$("msg").textContent=(err&&err.code==="declined")?"저장을 취소했어요.":"저장에 실패했어요."}
   btn.disabled=false;playing=true;last=null;
