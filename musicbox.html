@@ -34,7 +34,7 @@ button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc)
 </div>
 <label>재생 속도
 <select id="speed"><option value="1">1배 (실제 시간)</option><option value="2">2배</option><option value="5" selected>5배</option><option value="10">10배</option></select></label>
-<label>움직임<select id="mot"><option value="none">없음</option><option value="nod" selected>까딱 (위아래)</option><option value="tilt">기울기 (좌우)</option><option value="float">둥실</option></select></label><label>세기<select id="mstr"><option value="0.6">약하게</option><option value="1" selected>보통</option><option value="1.6">세게</option></select></label><label>위쪽 자르기<input type="range" id="cropT" min="0" max="900" value="365" style="width:100%"></label><label>아래쪽 자르기<input type="range" id="cropB" min="0" max="900" value="400" style="width:100%"></label><label>왼쪽 자르기<input type="range" id="cropL" min="0" max="500" value="146" style="width:100%"></label><label>오른쪽 자르기<input type="range" id="cropR" min="0" max="500" value="146" style="width:100%"></label><label>부드러움 (프레임)<select id="fps"><option value="10">10 (가벼움)</option><option value="15">15</option><option value="20" selected>20 (부드러움)</option></select></label><label>GIF 길이 (초)<input type="text" id="len" value="8" inputmode="numeric"></label>
+<label>움직임<select id="mot"><option value="none">없음</option><option value="nod" selected>까딱 (위아래)</option><option value="tilt">기울기 (좌우)</option><option value="float">둥실</option></select></label><label>세기<select id="mstr"><option value="0.6">약하게</option><option value="1" selected>보통</option><option value="1.6">세게</option></select></label><label>위쪽 자르기<input type="range" id="cropT" min="0" max="900" value="365" style="width:100%"></label><label>아래쪽 자르기<input type="range" id="cropB" min="0" max="900" value="400" style="width:100%"></label><label>왼쪽 자르기<input type="range" id="cropL" min="0" max="500" value="146" style="width:100%"></label><label>오른쪽 자르기<input type="range" id="cropR" min="0" max="500" value="146" style="width:100%"></label><label>부드러움 (프레임)<select id="fps"><option value="10">10 (가벼움)</option><option value="15">15</option><option value="20" selected>20 (부드러움)</option><option value="30">30 (아주 부드러움, 무거움)</option></select></label><label>GIF 길이 (초)<input type="text" id="len" value="8" inputmode="numeric"></label>
 <button id="pp">일시정지</button>
 <button id="mk" style="margin-top:8px">GIF로 저장</button>
 <div id="msg" class="tip"></div>
@@ -215,17 +215,6 @@ $("mk").addEventListener("click",async function(){
   }catch(err){$("msg").textContent=(err&&err.code==="declined")?"저장을 취소했어요.":"저장에 실패했어요."}
   btn.disabled=false;playing=true;last=null;
 });
-</script>[0]-o-6,y);g.lineTo(b[0]-o+14,y-15);g.lineTo(b[0]-o+14,y+15)}
-      else{g.moveTo(b[0]+o+6,y);g.lineTo(b[0]+o-14,y-15);g.lineTo(b[0]+o-14,y+15)}
-      g.closePath();g.fill()}
-    if(b[1]<0)g.fillRect(b[0]-40,y-16,8,32);else g.fillRect(b[0]+36,y-16,8,32);
-  });
-}
-function loop(ts){
-  if(playing){if(last!==null)elapsed+=(ts-last)/1000;last=ts;draw()}
-  requestAnimationFrame(loop);
-}
-draw();requestAnimationFrame(loop);
 </script>
 </body>
 </html>
