@@ -12,7 +12,7 @@
 body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;display:flex;flex-direction:column;align-items:center;padding:16px}
 h1{font-size:18px;margin:4px 0 12px}
 .wrap{width:100%;max-width:420px}
-.stage{position:relative;width:100%;max-width:calc(68vh * 9 / 16);aspect-ratio:9/16;margin:0 auto;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}.stage canvas,.stage img{position:absolute}.stage canvas{left:0;top:0;width:100%;height:100%}.stage img{left:16.3%;top:24.48%;width:67.41%;height:37.92%;object-fit:cover;display:none}
+.stage{position:relative;width:100%;max-width:calc(68vh * 9 / 16);aspect-ratio:9/16;margin:0 auto;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}.stage canvas,.stage img{position:absolute}.stage canvas{left:0;top:0;width:100%;height:100%}#fr{position:absolute;left:16.3%;top:24.48%;width:67.41%;height:37.92%;overflow:hidden}.stage img{left:0;top:0;width:100%;height:100%;object-fit:cover;display:none}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}
 label{display:block;font-size:13px;margin-bottom:10px}
 input[type=text],select{width:100%;margin-top:4px;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font-size:15px}
@@ -24,7 +24,7 @@ button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc)
 <body>
 <div class="wrap">
 <h1>플레이어 움짤 메이커</h1>
-<div class="stage"><img id="pic" alt=""><canvas id="c" width="1080" height="1920"></canvas></div>
+<div class="stage"><div id="fr"><img id="pic" alt=""></div><canvas id="c" width="1080" height="1920"></canvas></div>
 
 <div class="card">
 <button id="pick" type="button">그림 고르기 (PNG/JPG/GIF)</button><input type="file" id="file" accept="image/*" style="display:none"><div id="paste" contenteditable="true" style="margin:8px 0 12px;padding:10px;border:1px dashed var(--line);border-radius:8px;font-size:12px;opacity:.8;min-height:40px">고르기가 안 되면 이 칸을 길게 눌러 붙여넣기 하거나, 사진을 끌어다 놓아요</div>
@@ -34,7 +34,7 @@ button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc)
 </div>
 <label>재생 속도
 <select id="speed"><option value="1">1배 (실제 시간)</option><option value="2">2배</option><option value="5" selected>5배</option><option value="10">10배</option></select></label>
-<label>위쪽 자르기<input type="range" id="cropT" min="0" max="900" value="365" style="width:100%"></label><label>아래쪽 자르기<input type="range" id="cropB" min="0" max="900" value="400" style="width:100%"></label><label>왼쪽 자르기<input type="range" id="cropL" min="0" max="500" value="146" style="width:100%"></label><label>오른쪽 자르기<input type="range" id="cropR" min="0" max="500" value="146" style="width:100%"></label><label>GIF 길이 (초)<input type="text" id="len" value="8" inputmode="numeric"></label>
+<label>움직임<select id="mot"><option value="none">없음</option><option value="nod" selected>까딱 (위아래)</option><option value="tilt">기울기 (좌우)</option><option value="float">둥실</option></select></label><label>세기<select id="mstr"><option value="0.6">약하게</option><option value="1" selected>보통</option><option value="1.6">세게</option></select></label><label>위쪽 자르기<input type="range" id="cropT" min="0" max="900" value="365" style="width:100%"></label><label>아래쪽 자르기<input type="range" id="cropB" min="0" max="900" value="400" style="width:100%"></label><label>왼쪽 자르기<input type="range" id="cropL" min="0" max="500" value="146" style="width:100%"></label><label>오른쪽 자르기<input type="range" id="cropR" min="0" max="500" value="146" style="width:100%"></label><label>GIF 길이 (초)<input type="text" id="len" value="8" inputmode="numeric"></label>
 <button id="pp">일시정지</button>
 <button id="mk" style="margin-top:8px">GIF로 저장</button>
 <div id="msg" class="tip"></div>
@@ -103,13 +103,14 @@ function params(el){
 }
 function crop(){var T=+$("cropT").value,B=+$("cropB").value,L=+$("cropL").value,R=+$("cropR").value;return{x:L,y:T,w:1080-L-R,h:1920-T-B}}
 function overlay(c){g.fillStyle="rgba(90,90,90,.35)";g.fillRect(0,0,1080,c.y);g.fillRect(0,c.y+c.h,1080,1920-c.y-c.h);g.fillRect(0,c.y,c.x,c.h);g.fillRect(c.x+c.w,c.y,1080-c.x-c.w,c.h);g.strokeStyle="#ff4d8d";g.lineWidth=4;g.setLineDash([16,10]);g.strokeRect(c.x,c.y,c.w,c.h);g.setLineDash([])}
+function motion(t){var k=+$("mstr").value,m=$("mot").value;if(m==="none")return{dx:0,dy:0,rot:0,sc:1};var dx=0,dy=0,rot=0,P=2*Math.PI*t;if(m==="nod")dy=Math.sin(P*1.5)*14*k;else if(m==="tilt")rot=Math.sin(P*0.8)*4*k;else{dy=Math.sin(P*0.5)*10*k;dx=Math.sin(P*0.25)*8*k}return{dx:dx,dy:dy,rot:rot,sc:1.12}}
 function draw(){
   var p=params(elapsed);
   g.fillStyle="#fff";g.fillRect(0,0,1080,1920);
   if(hasPic){g.clearRect(176,470,728,728)}
   else{g.strokeStyle="#bbb";g.lineWidth=2;g.setLineDash([12,10]);g.strokeRect(176,470,728,728);
     g.fillStyle="#999";g.font="32px sans-serif";g.textAlign="center";g.fillText("여기에 그림이 들어가요",540,840)}
-  ui(g,p.cur,p.st,p.tot);overlay(crop());
+  ui(g,p.cur,p.st,p.tot);overlay(crop());var mm=motion(elapsed);pic.style.transform="translate("+mm.dx/7.28+"%,"+mm.dy/7.28+"%) rotate("+mm.rot+"deg) scale("+mm.sc+")";
 }
 function loop(ts){
   if(playing){if(last!==null)elapsed+=(ts-last)/1000;last=ts;draw()}
@@ -122,7 +123,7 @@ function give(files){if(!files||!files.length)return;try{var dt=new DataTransfer
 document.addEventListener("paste",function(e){var f=e.clipboardData&&e.clipboardData.files;if(f&&f.length){e.preventDefault();give(f)}});
 document.addEventListener("dragover",function(e){e.preventDefault()});
 document.addEventListener("drop",function(e){e.preventDefault();give(e.dataTransfer.files)});
-["cropT","cropB","cropL","cropR"].forEach(function(i){$(i).addEventListener("input",draw)});
+["mot","mstr","cropT","cropB","cropL","cropR"].forEach(function(i){$(i).addEventListener("input",draw)});
 /* GIF 인코더 (252색 고정 팔레트) */
 function lzw(ix){
   var out=[],bits=0,nb=0,cs=9,next=258,dict=new Map();
@@ -168,7 +169,7 @@ $("mk").addEventListener("click",async function(){
     var src=img;
     if(frames.length){var ms=(t*1000)%totalMs,acc=0;for(var q=0;q<frames.length;q++){acc+=frames[q].dur;if(ms<acc){src=frames[q].bmp;break}}}
     if(src){var iw=src.width,ih=src.height,r=Math.max(728/iw,728/ih),w=iw*r,h=ih*r;
-      og.save();og.beginPath();og.rect(176,470,728,728);og.clip();og.drawImage(src,176+(728-w)/2,470+(728-h)/2,w,h);og.restore()}
+      og.save();og.beginPath();og.rect(176,470,728,728);og.clip();var mo=motion(t);og.translate(540+mo.dx,834+mo.dy);og.rotate(mo.rot*Math.PI/180);og.scale(mo.sc,mo.sc);og.drawImage(src,-w/2,-h/2,w,h);og.restore()}
     ui(og,p.cur,p.st,p.tot);
     var px=og.getImageData(0,0,W,H).data,ix=new Uint8Array(W*H);
     for(var i=0,j=0;i<px.length;i+=4,j++){
