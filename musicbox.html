@@ -34,11 +34,11 @@ button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc)
 </div>
 <label>재생 속도
 <select id="speed"><option value="1">1배 (실제 시간)</option><option value="2">2배</option><option value="5" selected>5배</option><option value="10">10배</option></select></label>
-<label>움직임<select id="mot"><option value="none">없음</option><option value="nod" selected>까딱 (위아래)</option><option value="tilt">기울기 (좌우)</option><option value="float">둥실</option></select></label><label>세기<select id="mstr"><option value="0.6">약하게</option><option value="1" selected>보통</option><option value="1.6">세게</option></select></label><label>위쪽 자르기<input type="range" id="cropT" min="0" max="900" value="365" style="width:100%"></label><label>아래쪽 자르기<input type="range" id="cropB" min="0" max="900" value="400" style="width:100%"></label><label>왼쪽 자르기<input type="range" id="cropL" min="0" max="500" value="146" style="width:100%"></label><label>오른쪽 자르기<input type="range" id="cropR" min="0" max="500" value="146" style="width:100%"></label><label>GIF 길이 (초)<input type="text" id="len" value="8" inputmode="numeric"></label>
+<label>움직임<select id="mot"><option value="none">없음</option><option value="nod" selected>까딱 (위아래)</option><option value="tilt">기울기 (좌우)</option><option value="float">둥실</option></select></label><label>세기<select id="mstr"><option value="0.6">약하게</option><option value="1" selected>보통</option><option value="1.6">세게</option></select></label><label>위쪽 자르기<input type="range" id="cropT" min="0" max="900" value="365" style="width:100%"></label><label>아래쪽 자르기<input type="range" id="cropB" min="0" max="900" value="400" style="width:100%"></label><label>왼쪽 자르기<input type="range" id="cropL" min="0" max="500" value="146" style="width:100%"></label><label>오른쪽 자르기<input type="range" id="cropR" min="0" max="500" value="146" style="width:100%"></label><label>부드러움 (프레임)<select id="fps"><option value="10">10 (가벼움)</option><option value="15">15</option><option value="20" selected>20 (부드러움)</option></select></label><label>GIF 길이 (초)<input type="text" id="len" value="8" inputmode="numeric"></label>
 <button id="pp">일시정지</button>
 <button id="mk" style="margin-top:8px">GIF로 저장</button>
 <div id="msg" class="tip"></div>
-<div class="tip">그림 칸에는 움직이는 GIF도 넣을 수 있어요. 저장되는 GIF는 너비 540px, 초당 10프레임이에요. 어둡게 보이는 부분은 저장할 때 잘려요. 재생바가 끝에 닿으면 처음으로 돌아가요.</div>
+<div class="tip">그림 칸에는 움직이는 GIF도 넣을 수 있어요. 저장되는 GIF는 너비 540px, 움직임이 끊겨 보이면 프레임을 높여봐요. 어둡게 보이는 부분은 저장할 때 잘려요. 재생바가 끝에 닿으면 처음으로 돌아가요.</div>
 </div>
 </div>
 
@@ -140,7 +140,7 @@ function lzw(ix){
   emit(pre);emit(257);if(nb>0)out.push(bits&255);return out;
 }
 function medianCut(hist,N){
-  var cols=[];hist.forEach(function(c,k){cols.push({r:((k>>12)&63)*4+2,g:((k>>6)&63)*4+2,b:(k&63)*4+2,n:c})});
+  var cols=[];hist.forEach(function(c,k){cols.push({r:(k>>16)&255,g:(k>>8)&255,b:k&255,n:c})});
   var boxes=[cols],CH=["r","g","b"];
   while(boxes.length<N){
     var bi=-1,bro=0,bch="r";
@@ -173,10 +173,10 @@ $("mk").addEventListener("click",async function(){
   var dl={save:async function(o){var b=new Blob([o.data],{type:"image/gif"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=o.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}};
   if(!dl){$("msg").textContent="이 화면에서는 저장을 못 해요.";return}
   var btn=this;btn.disabled=true;playing=false;
-  var cr=crop(),W=540,sc=W/cr.w,H=Math.round(cr.h*sc),len=Math.min(Math.max(parseFloat($("len").value)||8,1),30),n=Math.round(len*10);
+  var cr=crop(),W=540,sc=W/cr.w,H=Math.round(cr.h*sc),len=Math.min(Math.max(parseFloat($("len").value)||8,1),30),FPS=+$("fps").value||20,n=Math.min(300,Math.round(len*FPS));
   var oc=document.createElement("canvas");oc.width=W;oc.height=H;var og=oc.getContext("2d",{willReadFrequently:true});
   function render(f){
-    var t=f/10,p=params(t);
+    var t=f/FPS,p=params(t);
     og.setTransform(1,0,0,1,0,0);og.fillStyle="#fff";og.fillRect(0,0,W,H);
     og.setTransform(sc,0,0,sc,-cr.x*sc,-cr.y*sc);
     var src=img;
@@ -190,23 +190,27 @@ $("mk").addEventListener("click",async function(){
   await new Promise(function(r){setTimeout(r,0)});
   var hist=new Map(),ks=Math.min(n,8);
   for(var s0=0;s0<ks;s0++){var d0=render(Math.floor(s0*n/ks));
-    for(var i0=0;i0<d0.length;i0+=12){var k0=((d0[i0]>>2)<<12)|((d0[i0+1]>>2)<<6)|(d0[i0+2]>>2);hist.set(k0,(hist.get(k0)||0)+1)}}
-  var pal=medianCut(hist,254);pal.push([255,255,255],[0,0,0]);
-  var lut=new Int16Array(262144).fill(-1);
+    for(var i0=0;i0<d0.length;i0+=8){var k0=(d0[i0]<<16)|(d0[i0+1]<<8)|d0[i0+2];hist.set(k0,(hist.get(k0)||0)+1)}}
+  var ent=[];hist.forEach(function(c,k){ent.push([k,c])});ent.sort(function(a,b){return b[1]-a[1]});
+  var pal=[],rest=new Map();
+  ent.forEach(function(e,qi){if(qi<100)pal.push([(e[0]>>16)&255,(e[0]>>8)&255,e[0]&255]);else rest.set(e[0],e[1])});
+  if(rest.size)pal=pal.concat(medianCut(rest,256-pal.length-2));
+  pal.push([255,255,255],[0,0,0]);
+  var lut=new Map();
   function nearest(r,g,b){var best=0,bd=1e9;for(var c=0;c<pal.length;c++){var dr=pal[c][0]-r,dg=pal[c][1]-g,db=pal[c][2]-b,d=dr*dr+dg*dg+db*db;if(d<bd){bd=d;best=c}}return best}
   var list=[];
   for(var f=0;f<n;f++){
     var px=render(f),ix=new Uint8Array(W*H);
     for(var i=0,j=0;i<px.length;i+=4,j++){
-      var key=((px[i]>>2)<<12)|((px[i+1]>>2)<<6)|(px[i+2]>>2),v=lut[key];
-      if(v<0){v=nearest(px[i],px[i+1],px[i+2]);lut[key]=v}
+      var key=(px[i]<<16)|(px[i+1]<<8)|px[i+2],v=lut.get(key);
+      if(v===undefined){v=nearest(px[i],px[i+1],px[i+2]);lut.set(key,v)}
       ix[j]=v}
     list.push(ix);
     $("msg").textContent="만드는 중… "+Math.round((f+1)/n*100)+"%";
     await new Promise(function(r){setTimeout(r,0)});
   }
   try{
-    await dl.save({filename:"player.gif",data:gifBytes(W,H,list,10,pal)});
+    await dl.save({filename:"player.gif",data:gifBytes(W,H,list,Math.round(100/FPS),pal)});
     $("msg").textContent="저장 완료!";
   }catch(err){$("msg").textContent=(err&&err.code==="declined")?"저장을 취소했어요.":"저장에 실패했어요."}
   btn.disabled=false;playing=true;last=null;
