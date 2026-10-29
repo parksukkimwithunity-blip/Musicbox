@@ -38,7 +38,7 @@ button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc)
 <button id="pp">일시정지</button>
 <button id="mk" style="margin-top:8px">GIF로 저장</button>
 <div id="msg" class="tip"></div>
-<div class="tip">그림 칸에는 움직이는 GIF도 넣을 수 있어요. 저장되는 GIF는 360×640, 초당 10프레임이에요. 재생바가 끝에 닿으면 처음으로 돌아가요.</div>
+<div class="tip">그림 칸에는 움직이는 GIF도 넣을 수 있어요. 저장되는 GIF는 480×704, 초당 10프레임이에요. 재생바가 끝에 닿으면 처음으로 돌아가요.</div>
 </div>
 </div>
 
@@ -155,13 +155,13 @@ $("mk").addEventListener("click",async function(){
   var dl={save:async function(o){var b=new Blob([o.data],{type:"image/gif"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=o.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},4000)}};
   if(!dl){$("msg").textContent="이 화면에서는 저장을 못 해요.";return}
   var btn=this;btn.disabled=true;playing=false;
-  var W=360,H=640,sc=W/1080,len=Math.min(Math.max(parseFloat($("len").value)||8,1),30),n=Math.round(len*10);
+  var W=480,sc=W/788,H=Math.round(1155*sc),len=Math.min(Math.max(parseFloat($("len").value)||8,1),30),n=Math.round(len*10);
   var oc=document.createElement("canvas");oc.width=W;oc.height=H;var og=oc.getContext("2d",{willReadFrequently:true});
   var list=[];
   for(var f=0;f<n;f++){
     var t=f/10,p=params(t);
     og.setTransform(1,0,0,1,0,0);og.fillStyle="#fff";og.fillRect(0,0,W,H);
-    og.setTransform(sc,0,0,sc,0,0);
+    og.setTransform(sc,0,0,sc,-146*sc,-365*sc);
     var src=img;
     if(frames.length){var ms=(t*1000)%totalMs,acc=0;for(var q=0;q<frames.length;q++){acc+=frames[q].dur;if(ms<acc){src=frames[q].bmp;break}}}
     if(src){var iw=src.width,ih=src.height,r=Math.max(728/iw,728/ih),w=iw*r,h=ih*r;
