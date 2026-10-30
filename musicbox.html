@@ -17,10 +17,11 @@ button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--fg);
 <h1>CD Case Spinner</h1>
 <canvas id="c" width="1000" height="600"></canvas>
 <div class="card">
-<label>앨범 디자인 사진 (케이스와 CD에 같이 들어가요)<input type="file" id="alb" accept="image/*"></label>
+<label>앨범 디자인 사진 (케이스 앞면에 들어가요)<input type="file" id="alb" accept="image/*"></label>
 <label>CD 색<input type="color" id="col" value="#d7dbe6" style="height:40px"></label>
 <div style="display:flex;gap:8px"><label style="flex:1">회전 방향<select id="dir"><option value="1">시계 방향</option><option value="-1">반시계 방향</option><option value="0">멈춤</option></select></label>
 <label style="flex:1">한 바퀴 시간<select id="T"><option value="2">2초</option><option value="4" selected>4초</option><option value="6">6초</option><option value="8">8초</option></select></label></div>
+<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="art"> CD에도 앨범 사진 넣기</label>
 <label>가운데 빈 원 크기<input type="range" id="hole" min="10" max="120" value="50"></label>
 <div id="lay"></div>
 <button id="mk">투명 배경 GIF로 저장</button>
@@ -54,9 +55,13 @@ function scene(c,t){
   c.strokeStyle="#c8c8cc";c.lineWidth=6;c.strokeRect(43,43,514,514);c.restore();
   c.save();c.beginPath();c.arc(CX,CY,R,0,TP);c.arc(CX,CY,hole,0,TP,true);c.clip();
   c.fillStyle=col;c.fillRect(CX-R,CY-R,2*R,2*R);
-  if(alb){c.save();c.translate(CX,CY);c.rotate(ang);cover(c,alb,0,0,2*R);c.restore()}
+  var art=$("art").checked;
+  if(alb&&art){c.save();c.translate(CX,CY);c.rotate(ang);cover(c,alb,0,0,2*R);c.restore()}
   c.globalAlpha=.3;c.fillStyle=col;c.fillRect(CX-R,CY-R,2*R,2*R);c.globalAlpha=1;
-  if(c.createConicGradient){var cg=c.createConicGradient(.6,CX,CY);[["#ff9ad5",0],["#9ad7ff",.25],["#fff39a",.5],["#a8ffd1",.75],["#ff9ad5",1]].forEach(function(q){cg.addColorStop(q[1],q[0])});c.globalAlpha=.14;c.fillStyle=cg;c.fillRect(CX-R,CY-R,2*R,2*R);c.globalAlpha=1}
+  if(c.createConicGradient){var cg=c.createConicGradient(.6+(art?0:ang),CX,CY);
+    if(art){[["#ff9ad5",0],["#9ad7ff",.25],["#fff39a",.5],["#a8ffd1",.75],["#ff9ad5",1]].forEach(function(q){cg.addColorStop(q[1],q[0])});c.globalAlpha=.14}
+    else{[[0,"rgba(255,255,255,0)"],[.07,"rgba(255,255,255,.75)"],[.14,"rgba(255,154,213,.25)"],[.25,"rgba(255,255,255,0)"],[.5,"rgba(255,255,255,0)"],[.57,"rgba(255,255,255,.75)"],[.64,"rgba(154,215,255,.25)"],[.75,"rgba(255,255,255,0)"],[1,"rgba(255,255,255,0)"]].forEach(function(q){cg.addColorStop(q[0],q[1])})}
+    c.fillStyle=cg;c.fillRect(CX-R,CY-R,2*R,2*R);c.globalAlpha=1}
   var hg=c.createLinearGradient(CX-hr,CY-hr,CX+hr,CY+hr);hg.addColorStop(0,"#fff");hg.addColorStop(.5,col);hg.addColorStop(1,"#fff");
   c.beginPath();c.arc(CX,CY,hr,0,TP);c.arc(CX,CY,hole,0,TP,true);c.fillStyle=hg;c.fill();c.restore();
   c.strokeStyle="rgba(255,255,255,.85)";c.lineWidth=7;c.beginPath();c.arc(CX,CY,R-4,0,TP);c.stroke();
